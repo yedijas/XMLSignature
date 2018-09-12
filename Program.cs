@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using System.Xml;
 using System.Deployment.Internal.CodeSigning;
+using System.IO;
 
 namespace XMLSignature
 {
@@ -24,12 +25,26 @@ namespace XMLSignature
                 // Generate a signing key.
                 RSACryptoServiceProvider Key = new RSACryptoServiceProvider();
 
+                // Add the key to the SignedXml document using ceritificate file. 
+                X509Certificate2 certificate;
+                using (FileStream fs =
+                       File.Open("somecertificate.pfx", FileMode.Open))
+                using (BinaryReader br = new BinaryReader(fs))
+                {
+                    certificate =
+                        new X509Certificate2(
+                           br.ReadBytes((int)br.BaseStream.Length), "demo");
+                }
+
                 // Create an XML file to sign.
-                CreateSomeXml("Example.xml");
+                //CreateSomeXml("Example.xml");
 
                 // Sign the XML that was just created and save it in a 
                 // new file.
                 SignXmlFile("Example.xml", "signedExample.xml", Key);
+                    
+                // Use below to use certificate.
+                //SignXmlFile("Example.xml", "signedExample.xml", (RSACryptoServiceProvider)certificate.PrivateKey);
 
                 // Verify the signature of the signed XML.
                 bool result = VerifyXmlFile("SignedExample.xml", Key);
@@ -64,7 +79,7 @@ namespace XMLSignature
             // Create a SignedXml object.
             SignedXml signedXml = new SignedXml(doc);
 
-            // Add the key to the SignedXml document. 
+            // Add the key to the SignedXml document using pre-shared key. 
             signedXml.SigningKey = Key;
             signedXml.SignedInfo.SignatureMethod = SIGNATURE_ALG;
 
@@ -76,6 +91,13 @@ namespace XMLSignature
             reference.AddTransform(new XmlDsigEnvelopedSignatureTransform());
             reference.AddTransform(new XmlDsigExcC14NTransform());
             reference.DigestMethod = SIGNATURE_DIG;
+
+            // If you are using certificate, use code below, 
+            // and pass the certificate as parameter.
+            //KeyInfo keyInfo = new KeyInfo();
+            //KeyInfoX509Data keyInfoData = new KeyInfoX509Data(certificate);
+            //keyInfo.AddClause(keyInfoData);
+            //signedXml.KeyInfo = keyInfo;
 
             // Add the reference to the SignedXml object.
             signedXml.AddReference(reference);
