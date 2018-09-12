@@ -1,6 +1,0 @@
-C:\projects\XMLSignature\XMLSignature\bin\Debug\XMLSignature.exe.config
-C:\projects\XMLSignature\XMLSignature\bin\Debug\XMLSignature.exe
-C:\projects\XMLSignature\XMLSignature\bin\Debug\XMLSignature.pdb
-C:\projects\XMLSignature\XMLSignature\obj\Debug\XMLSignature.csprojResolveAssemblyReference.cache
-C:\projects\XMLSignature\XMLSignature\obj\Debug\XMLSignature.exe
-C:\projects\XMLSignature\XMLSignature\obj\Debug\XMLSignature.pdb
