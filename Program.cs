@@ -16,6 +16,7 @@ namespace XMLSignature
     {
         private static string SIGNATURE_ALG = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
         private static string SIGNATURE_DIG = "http://www.w3.org/2001/04/xmlenc#sha256";
+        private static string CERT_FILE = "somecertificate.pfx";
         public static void Main(String[] args)
         {
             try
@@ -25,26 +26,14 @@ namespace XMLSignature
                 // Generate a signing key.
                 RSACryptoServiceProvider Key = new RSACryptoServiceProvider();
 
-                // Add the key to the SignedXml document using ceritificate file. 
-                X509Certificate2 certificate;
-                using (FileStream fs =
-                       File.Open("somecertificate.pfx", FileMode.Open))
-                using (BinaryReader br = new BinaryReader(fs))
-                {
-                    certificate =
-                        new X509Certificate2(
-                           br.ReadBytes((int)br.BaseStream.Length), "demo");
-                }
-
                 // Create an XML file to sign.
-                //CreateSomeXml("Example.xml");
+                CreateSomeXml("Example.xml");
 
                 // Sign the XML that was just created and save it in a 
                 // new file.
                 SignXmlFile("Example.xml", "signedExample.xml", Key);
                     
                 // Use below to use certificate.
-                //SignXmlFile("Example.xml", "signedExample.xml", (RSACryptoServiceProvider)certificate.PrivateKey);
 
                 // Verify the signature of the signed XML.
                 bool result = VerifyXmlFile("SignedExample.xml", Key);
@@ -65,6 +54,7 @@ namespace XMLSignature
                 Console.WriteLine(e.Message);
             }
         }
+
         // Sign an XML file and save the signature in a new file. This method does not  
         // save the public key within the XML file.  This file cannot be verified unless  
         // the verifying code has the key with which it was signed.
@@ -78,6 +68,18 @@ namespace XMLSignature
 
             // Create a SignedXml object.
             SignedXml signedXml = new SignedXml(doc);
+
+            // Add the key to the SignedXml document using ceritificate file. 
+            //X509Certificate2 certificate;
+            //using (FileStream fs =
+            //       File.Open(CERT_FILE, FileMode.Open))
+            //using (BinaryReader br = new BinaryReader(fs))
+            //{
+            //    certificate =
+            //        new X509Certificate2(
+            //           br.ReadBytes((int)br.BaseStream.Length), "demo");
+            //}
+            //signedXml.SigningKey = certificate.PrivateKey;
 
             // Add the key to the SignedXml document using pre-shared key. 
             signedXml.SigningKey = Key;
@@ -111,10 +113,6 @@ namespace XMLSignature
 
             // Append the element to the XML document.
             doc.DocumentElement.AppendChild(doc.ImportNode(xmlDigitalSignature, true));
-            if (doc.FirstChild is XmlDeclaration)
-            {
-                doc.RemoveChild(doc.FirstChild);
-            }
 
             // Save the signed XML document to a file specified
             // using the passed string.
@@ -122,7 +120,7 @@ namespace XMLSignature
             doc.WriteTo(xmltw);
             xmltw.Close();
         }
-
+        
         // Verify the signature of an XML file against an asymetric 
         // algorithm and return the result.
         public static Boolean VerifyXmlFile(String Name, RSA Key)
@@ -147,6 +145,40 @@ namespace XMLSignature
             // Check the signature and return the result.
             return signedXml.CheckSignature(Key);
         }
+
+        // Verify the signature of an XML file from its certificate 
+        // in the signature key info.
+        public static Boolean VerifyXmlFileFromCert(String Name)
+        {
+            // Create a new XML document.
+            XmlDocument xmlDocument = new XmlDocument();
+
+            // Load the passed XML file into the document. 
+            xmlDocument.Load(Name);
+
+            SignedXml signedXml = new SignedXml(xmlDocument);
+
+            // Load the signature node.
+            signedXml.LoadXml((XmlElement)xmlDocument.GetElementsByTagName("Signature")[0]);
+
+            // Get certificate key info from XML
+            X509Certificate2 certificate = null;
+            foreach (KeyInfoClause clause in signedXml.KeyInfo)
+            {
+                if (clause is KeyInfoX509Data)
+                {
+                    if (((KeyInfoX509Data)clause).Certificates.Count > 0)
+                    {
+                        certificate =
+                        (X509Certificate2)((KeyInfoX509Data)clause).Certificates[0];
+                    }
+                }
+            }
+
+            // Check the signature and return the result.
+            return signedXml.CheckSignature(certificate, true);
+        }
+
         // Create example data to sign.
         public static void CreateSomeXml(string FileName)
         {
@@ -155,10 +187,6 @@ namespace XMLSignature
 
             // Create a new XmlNode object.
             XmlNode node = document.CreateNode(XmlNodeType.Element, "", "MyElement", "samples");
-
-            // Add some text to the node.
-            node.InnerText = "Example text to be signed.";
-
             // Append the node to the document.
             document.AppendChild(node);
 
